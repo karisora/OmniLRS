@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: OmniLRS
+Version: 2.0.0
+Summary: A IsaacSim based lunar simulator for rover locomotion.
+Author-email: Antoine Richard <antoine.richard@uni.lu>, Junnosuke Kamohara <jkamohara3@gatech.edu>
+Keywords: lunar,simulator,rover,locomotion,IsaacSim
+Requires-Python: >=3.10
+Requires-Dist: black>=22.0.0
+Requires-Dist: skyfield
+Requires-Dist: zfpy
+Requires-Dist: warp-lang
+Requires-Dist: numba
+Requires-Dist: gdown
+Requires-Dist: gdal
+Requires-Dist: omegaconf
+Requires-Dist: hydra-core
+Requires-Dist: opencv-python

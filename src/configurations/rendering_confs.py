@@ -7,6 +7,7 @@ __email__ = "ljburtz@jaops.com"
 __status__ = "development"
 
 import dataclasses
+from typing import Optional
 
 
 @dataclasses.dataclass
@@ -88,6 +89,8 @@ class RendererConf:
     subdiv_refinement_level: int = dataclasses.field(default_factory=int)
     renderer: str = dataclasses.field(default_factory=str)
     headless: bool = dataclasses.field(default_factory=bool)
+    width: Optional[int] = None
+    height: Optional[int] = None
 
     def __post_init__(self):
         assert type(self.samples_per_pixel_per_frame) is int, "samples_per_pixel_per_frame must be an integer"
@@ -99,12 +102,16 @@ class RendererConf:
         assert type(self.subdiv_refinement_level) is int, "subdiv_refinement_level must be an integer"
         assert type(self.headless) is bool, "headless must be a boolean"
         assert type(self.renderer) is str, "renderer must be a string"
+        assert self.width is None or type(self.width) is int, "width must be an integer"
+        assert self.height is None or type(self.height) is int, "height must be an integer"
 
         assert self.samples_per_pixel_per_frame > 0, "samples_per_pixel_per_frame must be greater than 0"
         assert self.max_bounces > 0, "max_bounces must be greater than 0"
         assert self.max_specular_transmission_bounces > 0, "max_specular_transmission_bounces must be greater than 0"
         assert self.max_volume_bounces > 0, "max_volume_bounces must be greater than 0"
         assert self.subdiv_refinement_level >= 0, "subdiv_refinement_level must be greater or equal to 0"
+        assert self.width is None or self.width > 0, "width must be greater than 0"
+        assert self.height is None or self.height > 0, "height must be greater than 0"
         assert self.renderer in [
             "PathTracing",
             "RayTracedLighting",

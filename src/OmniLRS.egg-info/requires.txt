@@ -1,0 +1,10 @@
+black>=22.0.0
+skyfield
+zfpy
+warp-lang
+numba
+gdown
+gdal
+omegaconf
+hydra-core
+opencv-python
