@@ -1,0 +1,164 @@
+#usda 1.0
+(
+    defaultPrim = "Cansat"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Cansat" (
+    prepend apiSchemas = ["PhysicsArticulationRootAPI", "PhysxArticulationAPI"]
+    prepend references = @cansat_visual.usdc@
+)
+{
+    bool physxArticulation:enabledSelfCollisions = 0
+    int physxArticulation:solverPositionIterationCount = 16
+    int physxArticulation:solverVelocityIterationCount = 4
+
+    def "PhysicsMaterials"
+    {
+        def Material "rubber" (
+            prepend apiSchemas = ["PhysicsMaterialAPI"]
+        )
+        {
+            float physics:dynamicFriction = 0.8
+            float physics:restitution = 0
+            float physics:staticFriction = 1
+        }
+
+        def Material "skid" (
+            prepend apiSchemas = ["PhysicsMaterialAPI"]
+        )
+        {
+            float physics:dynamicFriction = 0.1
+            float physics:restitution = 0
+            float physics:staticFriction = 0.1
+        }
+    }
+
+    over "base_link" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "PhysxRigidBodyAPI"]
+    )
+    {
+        float physics:mass = 0.8
+        bool physxRigidBody:enableCCD = 1
+
+        def Cube "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "PhysxCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            rel material:binding:physics = </Cansat/PhysicsMaterials/rubber>
+            float physxCollision:contactOffset = 0.001
+            float physxCollision:restOffset = 0
+            uniform token purpose = "guide"
+            double size = 1
+            float3 xformOp:scale = (0.0874992, 0.159, 0.05209426)
+            double3 xformOp:translate = (0.00024846387540299053, 0.007499999999999667, 0.005045192178206889)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        over "visuals"
+        {
+            over "mesh_4414110047872" (
+                prepend apiSchemas = ["PhysicsCollisionAPI", "PhysxCollisionAPI", "MaterialBindingAPI", "PhysicsMeshCollisionAPI"]
+            )
+            {
+                rel material:binding:physics = </Cansat/PhysicsMaterials/skid>
+                uniform token physics:approximation = "convexHull"
+                float physxCollision:contactOffset = 0.001
+                float physxCollision:restOffset = 0
+            }
+        }
+    }
+
+    over "left_wheel_link" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "PhysxRigidBodyAPI"]
+    )
+    {
+        float physics:mass = 0.1
+        bool physxRigidBody:enableCCD = 1
+        double3 xformOp:translate = (0, 0.08979999999999848, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cylinder "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "PhysxCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Y"
+            double height = 0.025000000000001077
+            rel material:binding:physics = </Cansat/PhysicsMaterials/rubber>
+            float physxCollision:contactOffset = 0.001
+            float physxCollision:restOffset = 0
+            uniform token purpose = "guide"
+            double radius = 0.06070625997374655
+            double3 xformOp:translate = (0, -0.005500000000000033, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    over "right_wheel_link" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "PhysxRigidBodyAPI"]
+    )
+    {
+        float physics:mass = 0.1
+        bool physxRigidBody:enableCCD = 1
+        double3 xformOp:translate = (0, -0.08979999999999846, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Cylinder "collision" (
+            prepend apiSchemas = ["PhysicsCollisionAPI", "PhysxCollisionAPI", "MaterialBindingAPI"]
+        )
+        {
+            uniform token axis = "Y"
+            double height = 0.025000000000001077
+            rel material:binding:physics = </Cansat/PhysicsMaterials/rubber>
+            float physxCollision:contactOffset = 0.001
+            float physxCollision:restOffset = 0
+            uniform token purpose = "guide"
+            double radius = 0.06070625997374655
+            double3 xformOp:translate = (0, 0.0055000000000000465, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def "joints"
+    {
+        def PhysicsRevoluteJoint "left_wheel_joint" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysxJointAPI"]
+        )
+        {
+            float drive:angular:physics:damping = 0.05
+            float drive:angular:physics:maxForce = 0.2
+            float drive:angular:physics:stiffness = 0
+            float drive:angular:physics:targetVelocity = 0
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </Cansat/base_link>
+            rel physics:body1 = </Cansat/left_wheel_link>
+            point3f physics:localPos0 = (0, 0.0898, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physxJoint:maxJointVelocity = 1145.9156
+        }
+
+        def PhysicsRevoluteJoint "right_wheel_joint" (
+            prepend apiSchemas = ["PhysicsDriveAPI:angular", "PhysxJointAPI"]
+        )
+        {
+            float drive:angular:physics:damping = 0.05
+            float drive:angular:physics:maxForce = 0.2
+            float drive:angular:physics:stiffness = 0
+            float drive:angular:physics:targetVelocity = 0
+            uniform token drive:angular:physics:type = "force"
+            uniform token physics:axis = "Y"
+            rel physics:body0 = </Cansat/base_link>
+            rel physics:body1 = </Cansat/right_wheel_link>
+            point3f physics:localPos0 = (0, -0.0898, 0)
+            point3f physics:localPos1 = (0, 0, 0)
+            quatf physics:localRot0 = (1, 0, 0, 0)
+            quatf physics:localRot1 = (1, 0, 0, 0)
+            float physxJoint:maxJointVelocity = 1145.9156
+        }
+    }
+}
+

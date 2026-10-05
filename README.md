@@ -118,3 +118,9 @@ Please use the following citations if you use `OmniLRS` in your work.
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=OmniLRS/OmniLRS&type=date&legend=top-left" />
  </picture>
 </a>
+
+## CanSat
+
+`assets/cansat.fbx`の関節・物理設定を含むUSDとROS 2走行設定を追加しています。
+起動: `bash scripts/run_ros2.sh sim environment=lunalab robot=cansat`。
+操作・物理設定・再変換については[CanSatの手順](docs/cansat.md)を参照してください。

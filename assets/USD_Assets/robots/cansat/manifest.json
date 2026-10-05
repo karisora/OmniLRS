@@ -1,0 +1,22 @@
+{
+  "source_sha256": "95e74d2baf30a988c475c605f96fe0e60aca2a67e4524feb2e9813088709d031",
+  "mesh_instances": 179,
+  "metres_per_fbx_unit": 0.001,
+  "wheel_radius_m": 0.06070625997374655,
+  "wheel_track_m": 0.16859999999999686,
+  "wheel_width_m": {
+    "4414110031872": 0.025000000000001077,
+    "4414282443760": 0.025000000000001077
+  },
+  "settings": {
+    "body_mass_kg": 0.8,
+    "wheel_mass_kg": 0.1,
+    "wheel_damping": 0.05,
+    "max_wheel_torque_nm": 0.2,
+    "max_wheel_speed_rad_s": 20.0,
+    "static_friction": 1.0,
+    "dynamic_friction": 0.8,
+    "stabilizer_friction": 0.1
+  },
+  "total_mass_kg": 1.0
+}

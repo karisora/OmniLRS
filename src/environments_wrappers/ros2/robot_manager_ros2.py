@@ -8,13 +8,14 @@ __status__ = "development"
 
 from typing import List, Tuple
 
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Twist
 from pxr import Gf
 from rclpy.node import Node
 from std_msgs.msg import Empty, String
 
 from src.configurations.simulator_mode_enum import SimulatorMode
 from src.robots.robot import RobotManager
+from src.robots.differential_drive import DifferentialDrive
 
 
 class ROS_RobotManager(Node):
@@ -31,6 +32,18 @@ class ROS_RobotManager(Node):
 
         self.domain_id = 0
         self.modifications: List[Tuple[callable, dict]] = []
+        self.drive = None
+        parameters = self.RM.robot_parameters
+        if parameters and parameters.differential_drive:
+            self.drive = DifferentialDrive(**parameters.differential_drive)
+            for side in ("left", "right"):
+                if not parameters.wheel_joints.get(side):
+                    raise ValueError(f"Differential drive requires {side} wheel joints.")
+            self.create_subscription(Twist, self.drive.topic, self.receive_velocity, 1)
+
+    def receive_velocity(self, message: Twist) -> None:
+        # ROS executor only stores commands; Isaac is touched on the sim thread.
+        self.drive.receive(message.linear.x, message.angular.z)
 
     def reset(self) -> None:
         """
@@ -55,6 +68,8 @@ class ROS_RobotManager(Node):
         for mod in self.modifications:
             mod[0](**mod[1])
         self.clear_modifications()
+        if self.drive and self.RM.robot and self.RM.robot.is_articulation_api_ready():
+            self.RM.robot.set_joint_velocities(self.drive.targets(self.RM.robot_parameters.wheel_joints))
 
     def spawn_robot(self, data: PoseStamped) -> None:
         """
@@ -94,6 +109,8 @@ class ROS_RobotManager(Node):
         Resets a robot.
         """
 
+        if self.drive:
+            self.drive.reset()
         self.modifications.append([self.RM.reset_robot, {}])
 
 

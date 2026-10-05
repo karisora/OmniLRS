@@ -1,0 +1,26 @@
+# @package environment
+
+robots_settings:
+  parameters:
+    robot_name: cansat
+    usd_path: assets/USD_Assets/robots/cansat/cansat.usda
+    # Position refers to the axle midpoint. Z must clear the 0.061 m wheels.
+    pose:
+      position: [5.0, 5.0, 0.15]
+      orientation: [1.0, 0.0, 0.0, 0.0]
+    base_link: base_link
+    domain_id: 0
+    target_links: [left_wheel_link, right_wheel_link]
+    wheel_joints:
+      left: [left_wheel_joint]
+      right: [right_wheel_joint]
+    dimensions:
+      width: 0.20
+      length: 0.15
+    differential_drive:
+      # Derived from FBX; see assets/USD_Assets/robots/cansat/manifest.json.
+      wheel_radius: 0.06070626
+      wheel_track: 0.1686
+      max_wheel_speed: 20.0
+      command_timeout: 0.5
+      topic: /cmd_vel

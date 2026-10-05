@@ -1,0 +1,47 @@
+defaults:
+  - lunaryard_20m_deformable
+  - _self_
+
+# A small sand set sized for this 20 cm rover. Geometry changes under its wheels.
+physics_dt: 0.008333333333333333
+rendering_dt: 0.03333333333333333
+enforce_realtime: false
+stellar_engine_settings: null
+lunaryard_settings:
+  lab_length: 4.0
+  lab_width: 4.0
+  resolution: 0.01
+rocks_settings:
+  enable: false
+sun_settings:
+  intensity: 2200.0
+  elevation: 24.0
+  azimuth: 135.0
+  angle: 4.0
+  temperature: 5200.0
+terrain_manager:
+  texture_path: /Lunaryard/Looks/Sand
+  moon_yard:
+    crater_distribution:
+      densities: [0.0, 0.0, 0.0]
+      num_repeat: 0
+    base_terrain_generator:
+      max_elevation: 0.01
+      min_elevation: -0.01
+      z_scale: 1.0
+    deformation_engine:
+      enable: true
+      num_links: 2
+      delay: 0.0
+      footprint:
+        width: 0.025
+        height: 0.04
+      depth_distribution:
+        distribution: sinusoidal
+        wave_frequency: 2.0
+      force_depth_regression:
+        amplitude_slope: 0.0
+        amplitude_intercept: 0.002
+        mean_slope: 0.0
+        # The trapezoidal boundary mask is negative inside the tyre contact.
+        mean_intercept: -0.003
