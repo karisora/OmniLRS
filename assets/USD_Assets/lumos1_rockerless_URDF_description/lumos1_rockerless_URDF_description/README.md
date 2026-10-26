@@ -1,4 +1,46 @@
-# Lumos on Site20 — ROS 2 Jazzy / Gazebo Harmonic
+# Lumos on OmniLRS Lunaryard — ROS 2 Jazzy / Gazebo Harmonic
+
+既定の地形は **OmniLRS Lunaryard** です。リポジトリのルートから起動します。
+
+```bash
+bash scripts/run_lumos_gazebo.sh
+# GUIなしでもROS 2のステレオ映像を配信
+bash scripts/run_lumos_gazebo.sh gui:=false
+# 生成シード・スポーン位置を変更（m、rad）
+bash scripts/run_lumos_gazebo.sh seed:=43 x:=20 y:=20 yaw:=1.57
+```
+
+`cfg/environment/lunaryard_40m.yaml` と
+`src.terrain_management.terrain_generation.GenerateProceduralMoonYard` を直接使用して、
+OmniLRSと同じ起伏・クレータープロファイル・配置を生成します。
+標準は40 m四方、解像度2 cm、シード42です。生成結果を静的なheightmapとしてGazeboへ渡し、
+表示と車輪の接触の両方に同じ高さを使います。Isaac Simの起動は不要です。
+標本間隔を変えずに2000 × 2000から2049 × 2049へ端の高さでパディングし、
+元のLunaryard座標（+X/+Y、実データ範囲は0〜39.98 m）を維持します。
+スポーンは標準 `(20, 20)`、高さは地面から自動算出します。
+地面はOmniLRSの元設定 `texture_path: /Lunaryard/Looks/Basalt` に従います。
+標準の `assets/Textures/GravelStones/` の色画像・法線マップを使い、
+元MDLの `texture_scale=5` に合わせて0.2 m周期で繰り返します。
+色画像は元ファイルを直接参照し、EXR法線マップはGazebo用にPNGへ形式変換します。
+太陽高度は5°です。`texture_size` の標準値 `auto` は、選択した標準材質のUV倍率を使用します。
+
+生成物は `build/gazebo_lunaryard/` の `lunaryard.sdf`、`lunaryard_dem.npy`、
+`lunaryard_mask.npy`、`lunaryard_height.png`、`craters.json`、`spawn.json` です。
+`spawn.json` に元設定のパス・チェックサム・シード・解像度・生成器を記録します。
+別の正方形Lunaryard設定は `config:=/absolute/path/to/lunaryard_20m.yaml` などで指定できます。
+40 m以外を使う場合は、マップ内の `x`、`y` も指定してください。
+ネイティブ設定を使うため、このOmniLRSチェックアウトの `src/`、`cfg/`、
+クレータープロファイルが必要です。`run_lumos_gazebo.sh` がルートを自動設定します。
+
+ROS 2パッケージの既定エントリーポイントもLunaryardです。
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source install/gazebo_ros/setup.bash
+ros2 launch lumos1_rockerless_URDF_description gazebo.launch.py
+```
+
+## Site20を明示的に使う場合
 
 OmniLRS にある NASA Site20 DEM (`3200 × 3200`, `5 m/pixel`) を使い、
 月重力 `1.62 m/s²` の地形に Lumos をスポーンします。Isaac Sim は不要です。
@@ -89,8 +131,9 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{}'
 # 左旋回（rad/s）。linear.x と angular.z は同時指定もできます。
 ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist '{angular: {z: 0.3}}'
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{}'
-# モデルを削除して、保存された初期位置・姿勢へ再作成
-ros2 run lumos1_rockerless_URDF_description respawn_rover.py --output build/gazebo_site20
+# Lunaryardのモデルを削除して、保存された初期位置・姿勢へ再作成
+ros2 run lumos1_rockerless_URDF_description respawn_rover.py --output build/gazebo_lunaryard
+# Site20で起動した場合は --output build/gazebo_site20 を使用
 ```
 
 ROS トピック: `/cmd_vel`, `/odom`, `/joint_states`, `/tf`, `/tf_static`, `/clock`。
@@ -98,7 +141,7 @@ CAD メッシュは元の mm→m スケールを維持し、`base_footprint` で
 左右の車輪軸を統一し、4 輪の DiffDrive と円柱の車輪衝突形状を使用します。
 これは剛体地形の接触モデルです。OmniLRS の土壌変形は移植していません。
 旧 ROS 1 の `.launch` ファイルは ROS 2 では使用しません。
-ROS 2 のエントリーポイントは `site20.launch.py`（別名 `gazebo.launch.py`）です。
+ROS 2の既定は `lunaryard.launch.py`（別名 `gazebo.launch.py`）、Site20は `site20.launch.py` です。
 
 車体前方には基線長 12 cm の平行ステレオカメラを標準装備しています。
 各カメラは RGB 640 × 480、シミュレーション時刻で 15 fps、水平画角 90°です。
@@ -153,7 +196,8 @@ python3 scripts/check_lumos_ros2.py --drive
 ```bash
 sudo apt install ros-jazzy-ros-gz ros-jazzy-xacro ros-jazzy-robot-state-publisher \
   ros-jazzy-rqt-image-view ros-jazzy-tf2-ros ros-jazzy-rclpy \
-  python3-colcon-common-extensions python3-numpy python3-pil python3-yaml
+  python3-colcon-common-extensions python3-numpy python3-pil python3-yaml \
+  python3-scipy python3-opencv python3-matplotlib
 ```
 
 参照: [Gazebo の ROS 2 移行手順](https://gazebosim.org/docs/harmonic/migrating_gazebo_classic_ros2_packages/)、

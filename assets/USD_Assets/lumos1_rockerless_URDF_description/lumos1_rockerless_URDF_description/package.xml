@@ -2,7 +2,7 @@
 <package format="3">
   <name>lumos1_rockerless_URDF_description</name>
   <version>0.1.0</version>
-  <description>Lumos rover and NASA Site20 5 m/pixel terrain for ROS 2 Jazzy / Gazebo Harmonic.</description>
+  <description>Lumos rover with OmniLRS Lunaryard and NASA Site20 terrain for ROS 2 Jazzy / Gazebo Harmonic.</description>
   <maintainer email="syuntoku14@todo.todo">syuntoku14</maintainer>
   <license>MIT</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
@@ -16,6 +16,9 @@
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-pil</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>

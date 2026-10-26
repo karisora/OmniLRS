@@ -73,11 +73,13 @@ Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/
 
 ### ROS2 Integration
 
-To run the Lumos rover on the NASA Site20 5 m/pixel DEM in ROS 2 Jazzy / Gazebo
-Harmonic, run `bash scripts/run_site20_gazebo.sh`.
-See the [Site20 Gazebo instructions](assets/USD_Assets/lumos1_rockerless_URDF_description/lumos1_rockerless_URDF_description/README.md)
+To run the Lumos rover on OmniLRS Lunaryard terrain in ROS 2 Jazzy / Gazebo
+Harmonic, run `bash scripts/run_lumos_gazebo.sh`. The map uses the native
+`lunaryard_40m` terrain generator: a 40 m yard at 2 cm resolution.
+See the [Lumos / Lunaryard instructions](assets/USD_Assets/lumos1_rockerless_URDF_description/lumos1_rockerless_URDF_description/README.md)
 for spawning, respawning, `/cmd_vel` control, and stereo camera ROS topics
 (`/stereo/left/image_raw`, `/stereo/right/image_raw`, and their `camera_info`).
+The NASA Site20 map remains available with `bash scripts/run_site20_gazebo.sh`.
 
 See the separate git repository to run the ROS2 demo. \
 It supports joystick teleoperation and navigation. \

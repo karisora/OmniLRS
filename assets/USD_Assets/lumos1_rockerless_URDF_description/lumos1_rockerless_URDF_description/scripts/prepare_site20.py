@@ -166,6 +166,7 @@ def prepare(dem_path, package_path, output_path, samples=0, x=0.0, y=0.0, yaw=0.
     sun_direction = (-math.cos(elevation)*math.cos(azimuth),
                      -math.cos(elevation)*math.sin(azimuth),-math.sin(elevation))
     world = Template((package_path/'worlds/site20.sdf.in').read_text()).substitute(
+        world_name='site20', world_title='Site20', terrain_name='site20_5m_terrain', terrain_x=0, terrain_y=0,
         terrain_z=terrain_z, heightmap_uri=escape(heightmap.as_uri()),
         extent=(side-1)*5, collision_extent=side*5, height_range=height_range,
         texture_uri=escape((textures/'polar_lht_diffuse.png').as_uri()),

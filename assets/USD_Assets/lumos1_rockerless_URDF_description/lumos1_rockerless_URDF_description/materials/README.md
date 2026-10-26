@@ -1,4 +1,23 @@
-# NASA POLAR highlands material
+# OmniLRS default Lunaryard material
+
+The Lunaryard world follows `terrain_manager.texture_path` in its native YAML.
+The default `lunaryard_40m.yaml` selects `/Lunaryard/Looks/Basalt`, registered by
+`LunaryardController.build_scene()` from `assets/Textures/GravelStones.mdl`.
+
+Its original `gravel_stones_diff_4k.png` is referenced directly. The bundled
+OpenGL companion `gravel_stones_nor_gl_4k.exr` is converted to a linear PNG in the
+generated world's `materials/` directory for Gazebo. Source colors, resolution
+and normal detail are retained; no whitening or inferred normal detail is added.
+The default tile size is 0.2 m, corresponding to the MDL's UV scale of 5 on the
+native terrain's meter-based UVs. `texture_size:=auto` derives the scale from the
+selected MDL. The native Sand and LunarRegolith8k registrations are also supported
+when a different Lunaryard preset selects them.
+
+`spawn.json` records the selected material, source paths and conversion. These
+are the original OmniLRS texture maps rendered with Gazebo's terrain shader;
+Gazebo does not execute the Isaac Sim OmniPBR MDL shader itself.
+
+## NASA POLAR material for the separate Site20 world
 
 The default Site20 ground material uses the light, neutral **NU-LHT highlands
 regolith simulant** from [NASA Ames POLAR Terrain13](https://ti.arc.nasa.gov/dataset/IRG_PolarDB/).
@@ -51,7 +70,7 @@ python3 scripts/prepare_lunar_material.py --download
 Dependencies: Python 3, NumPy and Pillow. Runtime simulation has no network
 dependency. The older `regolith_diffuse.png` and `regolith_normal.png` remain as
 legacy copies derived from OmniLRS's `assets/Textures/LunarRegolith8k/`; the
-default world now uses `polar_lht_diffuse.png` and `polar_lht_normal.png`.
+Site20 world uses `polar_lht_diffuse.png` and `polar_lht_normal.png`.
 
 Attribution: Uland Wong, Ara Nefian, Larry Edwards, Xavier Buoyssounouse,
 P. Michael Furlong, Matt Deans, and Terry Fong. *Polar Optical Lunar Analog

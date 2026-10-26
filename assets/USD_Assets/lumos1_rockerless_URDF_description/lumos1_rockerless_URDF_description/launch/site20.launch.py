@@ -1,4 +1,4 @@
-"""Start Site20 and spawn Lumos on its measured lunar surface."""
+"""Shared Lumos launcher for Site20 and OmniLRS's native Lunaryard terrain."""
 
 import json
 import math
@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import yaml
 
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
@@ -25,12 +26,21 @@ def start(context):
     share = Path(get_package_share_directory(PACKAGE))
     prefix = Path(get_package_prefix(PACKAGE))
     cache = Path(arg('output')).expanduser().resolve()
-    preparation = [sys.executable, str(prefix/'lib'/PACKAGE/'prepare_site20.py'),
-                    '--package', str(share), '--dem', arg('dem'), '--output', str(cache),
-                    '--samples', arg('samples'), '--x', arg('x'), '--y', arg('y'), '--yaw', arg('yaw'),
-                    '--crater-count',arg('crater_count'),'--crater-seed',arg('crater_seed'),
+    terrain = arg('map')
+    if terrain == 'lunaryard':
+        preparation = [sys.executable, str(prefix/'lib'/PACKAGE/'prepare_lunaryard.py'),
+                       '--root', arg('omnilrs_root'), '--config', arg('config'), '--seed', arg('seed')]
+    elif terrain == 'site20':
+        preparation = [sys.executable, str(prefix/'lib'/PACKAGE/'prepare_site20.py'),
+                       '--dem', arg('dem'), '--samples', arg('samples'),
+                       '--crater-count', arg('crater_count'), '--crater-seed', arg('crater_seed')]
+    else:
+        raise ValueError('map must be lunaryard or site20')
+    preparation.extend([
+                    '--package', str(share), '--output', str(cache),
+                    '--x', arg('x'), '--y', arg('y'), '--yaw', arg('yaw'),
                     '--sun-elevation',arg('sun_elevation'),'--sun-azimuth',arg('sun_azimuth'),
-                    '--sun-intensity',arg('sun_intensity'),'--texture-size',arg('texture_size')]
+                    '--sun-intensity',arg('sun_intensity'),'--texture-size',arg('texture_size')])
     # Sensor rendering also needs the terrain resources when the GUI is disabled.
     vendor = Path(get_package_prefix('gz_rendering_vendor'))
     rendering = os.environ.get('GZ_RENDERING_RESOURCE_PATH',
@@ -38,18 +48,24 @@ def start(context):
     preparation.extend(['--rendering-resources',rendering])
     subprocess.run(preparation,check=True)
     spawn = json.loads((cache/'spawn.json').read_text())
+    world_name = spawn['world']
+    bridges = yaml.safe_load((share/'config/bridge.yaml').read_text())
+    for bridge in bridges:
+        if bridge['ros_topic_name'] == '/clock':
+            bridge['gz_topic_name'] = f'/world/{world_name}/clock'
+    (cache/'bridge.yaml').write_text(yaml.safe_dump(bridges))
     command = ['gz', 'sim', '-r', '-v', '3']
     if arg('gui').lower() != 'true':
         command.append('-s')
         if arg('headless_rendering').lower() == 'true':
             command.append('--headless-rendering')
-    command.append(str(cache/'site20.sdf'))
+    command.append(str(cache/f'{world_name}.sdf'))
     environment = {'GZ_SIM_RESOURCE_PATH': str(share.parent)+os.pathsep+os.environ.get('GZ_SIM_RESOURCE_PATH', '')}
     if 'rendering_resources' in spawn:
         environment['GZ_RENDERING_RESOURCE_PATH'] = spawn['rendering_resources']
     server = ExecuteProcess(cmd=command, output='screen', additional_env=environment)
     rover = Node(package='ros_gz_sim', executable='create', output='screen',
-                 arguments=['-world', 'site20', '-file', str(cache/'lumos.urdf'),
+                 arguments=['-world', world_name, '-file', str(cache/'lumos.urdf'),
                             '-name', 'lumos', '-allow_renaming', 'false',
                             '-x', str(spawn['x']), '-y', str(spawn['y']), '-z', str(spawn['z']), '-Y', str(spawn['yaw'])])
     actions = [
@@ -58,7 +74,7 @@ def start(context):
         Node(package='robot_state_publisher', executable='robot_state_publisher',
              parameters=[{'use_sim_time': True, 'robot_description': (cache/'lumos.urdf').read_text()}]),
         Node(package='ros_gz_bridge', executable='parameter_bridge',
-             parameters=[{'use_sim_time': True, 'config_file': str(share/'config/bridge.yaml')}], output='screen'),
+             parameters=[{'use_sim_time': True, 'config_file': str(cache/'bridge.yaml')}], output='screen'),
     ]
     if arg('gui').lower() == 'true':
         # Set the view after the GUI scene is ready, overriding a saved overview camera.
@@ -75,23 +91,28 @@ def start(context):
     return [*actions, rover]
 
 
-def generate_launch_description():
+def generate_launch_description(map_name='site20'):
     root = Path(os.environ.get('OMNILRS_ROOT', Path.cwd()))
     defaults = {
+        'map': (map_name, 'Terrain: lunaryard or site20'),
+        'omnilrs_root': (str(root), 'OmniLRS checkout containing src/ and cfg/'),
+        'config': (str(root/'cfg/environment/lunaryard_40m.yaml'), 'Native OmniLRS Lunaryard YAML preset'),
+        'seed': ('42', 'Lunaryard terrain generation seed'),
         'dem': (str(root/'assets/Terrains/SouthPole/Site20_final_adj_5mpp_surf/dem.npy'), 'Existing Site20 dem.npy with adjacent dem.yaml'),
-        'output': (str(root/'build/gazebo_site20'), 'Generated world, heightmap and spawn pose'),
+        'output': (str(root/f'build/gazebo_{map_name}'), 'Generated world, heightmap and spawn pose'),
         'samples': ('0', '0: full map; 257/513/1025/2049: centered crop, still 5 m/pixel'),
         'gui': ('true', 'Start Gazebo GUI'),
         'headless_rendering': ('true', 'Use EGL for cameras with gui:=false; false uses an X display'),
-        'x': ('0', 'Spawn X in meters from the center of Site20'),
-        'y': ('0', 'Spawn Y in meters toward the top of the DEM raster'),
+        'x': ('20' if map_name == 'lunaryard' else '0', 'Spawn world X in meters'),
+        'y': ('20' if map_name == 'lunaryard' else '0', 'Spawn world Y in meters'),
         'yaw': ('0', 'Spawn yaw in radians; zero faces +X'),
         'crater_count': ('64', 'Number of synthetic craters; 0 keeps only the measured DEM'),
         'crater_seed': ('20', 'Repeatable crater seed, or -1 for a fresh random layout'),
         'sun_elevation': ('5', 'Sun elevation above the grid horizon, in degrees'),
         'sun_azimuth': ('135', 'Direction toward the sun, degrees from +X toward +Y in the DEM grid'),
         'sun_intensity': ('10', 'Gazebo light / photographic brightness multiplier (not calibrated irradiance)'),
-        'texture_size': ('0.375', 'POLAR NU-LHT regolith texture tile size in meters (approximate)'),
+        'texture_size': ('auto' if map_name == 'lunaryard' else '0.375',
+                         'Tile size in meters; auto uses Lunaryard material UV scale'),
     }
     return LaunchDescription([
         *[DeclareLaunchArgument(name, default_value=value, description=description)
