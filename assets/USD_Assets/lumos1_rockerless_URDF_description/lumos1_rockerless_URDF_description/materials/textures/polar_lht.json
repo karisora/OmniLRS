@@ -1,0 +1,45 @@
+{
+  "dataset": "https://ti.arc.nasa.gov/dataset/IRG_PolarDB/",
+  "documentation": "https://ti.arc.nasa.gov/dataset/IRG_PolarDB/PolarDB_Readme.pdf",
+  "archive": "https://ti.arc.nasa.gov/dataset/IRG_PolarDB/PolarDB_download/Terrain13_LHT.zip",
+  "member": "Terrain13_LHT/PosA_1500_Loff/Sun_30/CamL_287297164_0128.png",
+  "source_sha256": "b0bd3b31da65d91e20a9ecf9f7c1663af3c67782d293b47d1a1eec3663ced80f",
+  "source_kind": "NASA Ames laboratory NU-LHT highlands regolith analog; not lunar orbital imagery",
+  "source_size": [
+    1936,
+    1216
+  ],
+  "source_bits": 12,
+  "rectification_quad": [
+    819,
+    432,
+    785,
+    818,
+    1560,
+    818,
+    1433,
+    432
+  ],
+  "rectified_size": [
+    1024,
+    1024
+  ],
+  "crop": [
+    480,
+    64,
+    864,
+    448
+  ],
+  "output_size": [
+    2048,
+    2048
+  ],
+  "tile_size_m": 0.375,
+  "tile_scale": "Approximate from the 1 m testbed; not a surveyed surface scale",
+  "reference_linear_albedo": 0.3,
+  "albedo_detail_fraction": 0.065,
+  "normal_rms_slope": 0.025,
+  "processing": "Perspective rectification, log illumination removal, periodic boundary correction, neutral sRGB albedo",
+  "normal_note": "Low amplitude image-derived shading proxy; not measured height or recovered normals",
+  "citation": "Wong et al., Polar Optical Lunar Analog Reconstruction (POLAR) Stereo Dataset, NASA Ames, May 2017"
+}

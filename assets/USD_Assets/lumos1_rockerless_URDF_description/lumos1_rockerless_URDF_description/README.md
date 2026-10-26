@@ -17,7 +17,7 @@ bash scripts/run_site20_gazebo.sh
 
 ```bash
 bash scripts/run_site20_gazebo.sh samples:=257
-# GUI なし（物理シミュレーションのみ）
+# GUI なし（EGLでステレオカメラの描画・ROS配信も継続）
 bash scripts/run_site20_gazebo.sh gui:=false samples:=257
 # 別の位置へスポーン（m、rad）。高さは地形から自動算出します。
 bash scripts/run_site20_gazebo.sh x:=10 y:=20 yaw:=1.57
@@ -37,7 +37,7 @@ bash scripts/run_site20_gazebo.sh x:=10 y:=20 yaw:=1.57
 # 太陽の高度・方位（度）を変更
 bash scripts/run_site20_gazebo.sh sun_elevation:=5 sun_azimuth:=135
 # 見やすい高めの太陽と、地面テクスチャの繰り返し寸法（m）
-bash scripts/run_site20_gazebo.sh sun_elevation:=15 sun_intensity:=3 texture_size:=2
+bash scripts/run_site20_gazebo.sh sun_elevation:=15 sun_intensity:=10 texture_size:=0.375
 # 毎回違うクレーター配置
 bash scripts/run_site20_gazebo.sh crater_count:=64 crater_seed:=-1
 # 特定の配置を再現、または追加クレーターを無効化
@@ -48,12 +48,19 @@ bash scripts/run_site20_gazebo.sh crater_count:=0
 `sun_azimuth` は地図グリッド +X から +Y 向きに測った太陽の方位です。
 黒い背景と弱い環境光を使い、低い太陽からの直接光と長い影を表現します。
 南極の低い日照角を参考にした固定照明で、日時による天体暦や照度の測定値は再現していません。
-`sun_intensity` は Gazebo の表示用倍率です。
+`sun_intensity` は Gazebo の照明・撮影時の明るさに相当する表示用倍率（標準 `10`）です。
 [NASA の月の南極の照明資料](https://science.nasa.gov/resource/shadows-near-the-moons-south-pole/)を参考にしています。
 
-地面には既存の `assets/Textures/LunarRegolith8k/` から作った 2K テクスチャを同梱しています。
-色画像と OpenGL ノーマルマップを使い、2 m 四方で繰り返します。
-粒状の凹凸は見た目のみで、車輪の接触地形は 5 m の DEM です。
+地面には [NASA POLAR Terrain13](https://ti.arc.nasa.gov/dataset/IRG_PolarDB/) の
+明るい月高地模擬材 NU-LHT の撮影画像から作った、無彩色の 2K テクスチャを使います。
+岩・設備・縁の影を避けた部分を抽出し、大きな照明むらと繰り返しの境界を抑えています。
+月高地の参照アルベド `0.30` を用い、微細な法線の強さを抑えて、低い太陽でも黒い斑点が
+過剰に生じない淡い灰色の粉体表面にしています。タイル寸法は標準約 `0.375 m` です。
+原画像は地上実験の月面模擬材で、Site20 の実際の色分布を測った画像ではありません。
+PGDA の Site20 データは標高データとして使用します。
+粒状の凹凸は表示用で、車輪の接触地形は引き続き 5 m の DEM です。
+出典・加工条件・再生成は [材質の説明](materials/README.md) と
+`materials/textures/polar_lht.json` を参照してください。原画像も同梱しており、起動時の通信は不要です。
 Gazebo Harmonic の Ogre2 には、heightmap に roughness map がない場合に粗さを 0 にする
 描画処理があります。このマップでは `build/gazebo_site20/rendering/` に描画リソースをコピーし、
 該当する既定値だけを `0.95` にして乾いた地面の強い鏡面反射を抑えます。
@@ -76,8 +83,11 @@ Gazebo Harmonic の Ogre2 には、heightmap に roughness map がない場合�
 ```bash
 source /opt/ros/jazzy/setup.bash
 source install/gazebo_ros/setup.bash
-# +X 方向へ 0.1 m/s。Ctrl+C 後は必ず停止コマンドを送ります。
+# 車体前方へ 0.1 m/s。Ctrl+C 後は必ず停止コマンドを送ります。
 ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.1}}'
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{}'
+# 左旋回（rad/s）。linear.x と angular.z は同時指定もできます。
+ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist '{angular: {z: 0.3}}'
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{}'
 # モデルを削除して、保存された初期位置・姿勢へ再作成
 ros2 run lumos1_rockerless_URDF_description respawn_rover.py --output build/gazebo_site20
@@ -90,10 +100,59 @@ CAD メッシュは元の mm→m スケールを維持し、`base_footprint` で
 旧 ROS 1 の `.launch` ファイルは ROS 2 では使用しません。
 ROS 2 のエントリーポイントは `site20.launch.py`（別名 `gazebo.launch.py`）です。
 
+車体前方には基線長 12 cm の平行ステレオカメラを標準装備しています。
+各カメラは RGB 640 × 480、シミュレーション時刻で 15 fps、水平画角 90°です。
+レンズ中心は `base_footprint` に対して前方 12.3 cm、高さ約 29 cm、左右 ±6 cm にあります。
+光学フレームは `stereo_left_optical_frame` と `stereo_right_optical_frame` で、
+ROS の +Z 前方・+X 右・+Y 下に合わせた固定 TF を配信します。
+
+| ROS 2 トピック | メッセージ型 |
+| --- | --- |
+| `/stereo/left/image_raw` | `sensor_msgs/msg/Image` |
+| `/stereo/right/image_raw` | `sensor_msgs/msg/Image` |
+| `/stereo/left/camera_info` | `sensor_msgs/msg/CameraInfo` |
+| `/stereo/right/camera_info` | `sensor_msgs/msg/CameraInfo` |
+
+すべて Gazebo → ROS 2 の片方向配信で、QoS は Sensor Data（Best Effort / Volatile）です。
+画像・CameraInfo はシミュレーション時刻を使います。左右の内部パラメーターは共通で、
+右 CameraInfo の `P[3] = -fx × 0.12 = -38.4` に基線長を含みます。
+歪みなしの平行ピンホールモデルです。視差画像や深度画像の計算は含めていません。
+
+映像の表示と受信確認（起動後、別ターミナル）:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+# 左右を別ウィンドウで表示。それぞれ別ターミナルから起動できます。
+ros2 run rqt_image_view rqt_image_view /stereo/left/image_raw
+ros2 run rqt_image_view rqt_image_view /stereo/right/image_raw
+# フレームレート、キャリブレーションの確認
+ros2 topic hz /stereo/left/image_raw
+ros2 topic echo /stereo/right/camera_info --once --qos-reliability best_effort
+```
+
+RViz2 の Image 表示を使う場合は対象の画像トピックを選び、Reliability を
+`Best Effort` にします。TF は `odom` → `base_footprint` → 各カメラに接続されます。
+`gui:=false` でも描画用の OpenGL / EGL 環境が必要です。
+EGL を使わず既存の X ディスプレイで描画する場合は `gui:=false headless_rendering:=false` を指定します。
+
+リポジトリのルートから自動確認も実行できます。
+
+```bash
+# 左右の同時刻画像・CameraInfo・光学TF・速度指令の購読先を確認
+python3 scripts/check_lumos_ros2.py
+# さらに短時間の前進・左旋回・停止を実行し、オドメトリで応答を確認
+python3 scripts/check_lumos_ros2.py --drive
+```
+
+確認結果は `build/lumos_ros2_check/ros2_check.json`、左右画像は
+`build/lumos_ros2_check/stereo.png` に保存します。`--drive` は実際にローバーを動かすため、
+他の速度指令ノードを停止して実行してください。
+
 依存パッケージを追加する必要がある環境では:
 
 ```bash
 sudo apt install ros-jazzy-ros-gz ros-jazzy-xacro ros-jazzy-robot-state-publisher \
+  ros-jazzy-rqt-image-view ros-jazzy-tf2-ros ros-jazzy-rclpy \
   python3-colcon-common-extensions python3-numpy python3-pil python3-yaml
 ```
 

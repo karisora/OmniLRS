@@ -10,6 +10,9 @@
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
     <scene>
       <!-- Small fill approximates reflected surface light; no atmospheric sky. -->
       <ambient>0.02 0.02 0.02 1</ambient>
@@ -19,7 +22,7 @@
     </scene>
     <light name="sun" type="directional">
       <pose>0 0 10 0 0 0</pose>
-      <diffuse>1 0.99 0.97 1</diffuse>
+      <diffuse>1 1 1 1</diffuse>
       <specular>0.05 0.05 0.05 1</specular>
       <intensity>${sun_intensity}</intensity>
       <direction>${sun_direction}</direction>

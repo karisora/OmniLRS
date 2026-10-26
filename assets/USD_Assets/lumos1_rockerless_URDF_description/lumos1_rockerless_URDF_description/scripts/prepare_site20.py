@@ -92,7 +92,7 @@ def add_craters(data, r0, c0, source_shape, spawn_x, spawn_y, count, seed):
 
 def prepare(dem_path, package_path, output_path, samples=0, x=0.0, y=0.0, yaw=0.0,
             crater_count=0, crater_seed=20, sun_elevation=5.0, sun_azimuth=135.0,
-            sun_intensity=3.0, texture_size=2.0, rendering_resources=None):
+            sun_intensity=10.0, texture_size=0.375, rendering_resources=None):
     dem_path, package_path, output_path = map(Path, (dem_path, package_path, output_path))
     dem_path = dem_path.expanduser().resolve()
     output_path = output_path.expanduser().resolve()
@@ -159,7 +159,7 @@ def prepare(dem_path, package_path, output_path, samples=0, x=0.0, y=0.0, yaw=0.
     heightmap = output_path/'site20_height.png'
     Image.fromarray(pixels).save(heightmap)
     textures = package_path.resolve()/'materials/textures'
-    for name in ('regolith_diffuse.png','regolith_normal.png'):
+    for name in ('polar_lht_diffuse.png','polar_lht_normal.png','polar_lht.json'):
         if not (textures/name).is_file():
             raise FileNotFoundError(f'Missing packaged lunar texture: {textures/name}')
     elevation, azimuth = math.radians(sun_elevation), math.radians(sun_azimuth)
@@ -168,8 +168,8 @@ def prepare(dem_path, package_path, output_path, samples=0, x=0.0, y=0.0, yaw=0.
     world = Template((package_path/'worlds/site20.sdf.in').read_text()).substitute(
         terrain_z=terrain_z, heightmap_uri=escape(heightmap.as_uri()),
         extent=(side-1)*5, collision_extent=side*5, height_range=height_range,
-        texture_uri=escape((textures/'regolith_diffuse.png').as_uri()),
-        normal_uri=escape((textures/'regolith_normal.png').as_uri()),texture_size=texture_size,
+        texture_uri=escape((textures/'polar_lht_diffuse.png').as_uri()),
+        normal_uri=escape((textures/'polar_lht_normal.png').as_uri()),texture_size=texture_size,
         sun_direction=' '.join(str(v) for v in sun_direction),sun_intensity=sun_intensity,
         camera_pose=f'{x+1.2} {y-1.2} {z+0.9} 0 0.48 2.356194490192345')
     (output_path/'site20.sdf').write_text(world)
@@ -185,6 +185,7 @@ def prepare(dem_path, package_path, output_path, samples=0, x=0.0, y=0.0, yaw=0.
                     crater_count=len(craters),crater_seed=seed,craters_file=str(output_path/'craters.json'),
                     sun_elevation_deg=sun_elevation,sun_azimuth_deg=sun_azimuth,
                     sun_intensity=sun_intensity,texture_size_m=texture_size,
+                    surface_material=json.loads((textures/'polar_lht.json').read_text()),
                     urdf=str(output_path/'lumos.urdf'))
     if rendering_resources is not None:
         metadata['rendering_resources'] = str(matte_terrain_resources(rendering_resources,output_path/'rendering'))
@@ -202,8 +203,8 @@ def main():
     parser.add_argument('--crater-seed',type=int,default=20)
     parser.add_argument('--sun-elevation',type=float,default=5.0)
     parser.add_argument('--sun-azimuth',type=float,default=135.0)
-    parser.add_argument('--sun-intensity',type=float,default=3.0)
-    parser.add_argument('--texture-size',type=float,default=2.0)
+    parser.add_argument('--sun-intensity',type=float,default=10.0)
+    parser.add_argument('--texture-size',type=float,default=0.375)
     parser.add_argument('--rendering-resources',type=Path)
     for name in ('x', 'y', 'yaw'):
         parser.add_argument('--'+name, type=float, default=0.0)

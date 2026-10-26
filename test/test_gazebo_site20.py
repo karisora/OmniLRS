@@ -5,6 +5,7 @@ No Gazebo server or downloaded DEM is needed.
 """
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -93,6 +94,71 @@ def test_rover_wheels_have_consistent_axes_and_ground_contact():
     assert robot.find("gazebo/plugin[@filename='libgazebo_ros_control.so']") is None
 
 
+def test_velocity_bridge_reaches_the_four_wheel_controller():
+    robot = ET.fromstring(xacro.process_file(str(PACKAGE/'urdf/lumos1_rockerless_URDF.xacro')).toxml())
+    drive = robot.find("gazebo/plugin[@name='gz::sim::systems::DiffDrive']")
+    bridges = yaml.safe_load((PACKAGE/'config/bridge.yaml').read_text())
+    command = next(item for item in bridges if item['ros_topic_name'] == '/cmd_vel')
+    assert command['direction'] == 'ROS_TO_GZ'
+    assert command['ros_type_name'] == 'geometry_msgs/msg/Twist'
+    assert command['gz_topic_name'] == drive.findtext('topic')
+
+
+def test_stereo_optical_frames_and_calibration_match_physical_baseline():
+    robot = ET.fromstring(xacro.process_file(str(PACKAGE/'urdf/lumos1_rockerless_URDF.xacro')).toxml())
+    bridges = yaml.safe_load((PACKAGE/'config/bridge.yaml').read_text())
+
+    def transform(link):
+        if link == 'base_footprint':
+            return np.eye(4)
+        joint = next(j for j in robot.findall('joint') if j.find('child').get('link') == link)
+        origin = joint.find('origin')
+        xyz = np.fromstring(origin.get('xyz', '0 0 0'), sep=' ')
+        roll, pitch, yaw = np.fromstring(origin.get('rpy', '0 0 0'), sep=' ')
+        cr, cp, cy = np.cos([roll, pitch, yaw])
+        sr, sp, sy = np.sin([roll, pitch, yaw])
+        rotation = np.array([[cy*cp, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
+                             [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
+                             [-sp, cp*sr, cp*cr]])
+        local = np.eye(4)
+        local[:3, :3], local[:3, 3] = rotation, xyz
+        return transform(joint.find('parent').get('link')) @ local
+
+    left = transform('stereo_left_optical_frame')
+    right = transform('stereo_right_optical_frame')
+    baseline = (np.linalg.inv(left) @ right)[0, 3]
+    assert baseline == pytest.approx(.12)
+    # Both look forward; optical right/down map to rover -Y/-Z.
+    for frame in (left, right):
+        np.testing.assert_allclose(frame[:3, :3], [[0, 0, 1], [-1, 0, 0], [0, -1, 0]], atol=1e-10)
+    for side in ('left', 'right'):
+        sensor = robot.find(f"gazebo/sensor[@name='stereo_{side}']")
+        camera = sensor.find('camera')
+        frame_id = f'stereo_{side}_optical_frame'
+        assert sensor.findtext('gz_frame_id') == camera.findtext('optical_frame_id') == frame_id
+        assert sensor.findtext('update_rate') == '15'
+        assert camera.findtext('image/width') == '640'
+        assert camera.findtext('image/height') == '480'
+        fx = float(camera.findtext('lens/intrinsics/fx'))
+        assert float(camera.findtext('lens/projection/p_fx')) == fx
+        assert float(camera.findtext('lens/projection/tx')) == pytest.approx(-fx*baseline if side == 'right' else 0)
+        for topic, ros_type, gz_type in ((sensor.findtext('topic'), 'Image', 'Image'),
+                                        (camera.findtext('camera_info_topic'), 'CameraInfo', 'CameraInfo')):
+            bridge = next(item for item in bridges if item['gz_topic_name'] == topic)
+            assert bridge['ros_topic_name'] == topic
+            assert bridge['direction'] == 'GZ_TO_ROS'
+            assert bridge['qos_profile'] == 'SENSOR_DATA'
+            assert bridge['ros_type_name'] == f'sensor_msgs/msg/{ros_type}'
+            assert bridge['gz_type_name'] == f'gz.msgs.{gz_type}'
+
+
+def test_world_enables_camera_rendering(dem, tmp_path):
+    prepare.prepare(dem[0], PACKAGE, tmp_path/'world')
+    world = ET.parse(tmp_path/'world/site20.sdf').getroot()
+    plugin = world.find("world/plugin[@name='gz::sim::systems::Sensors']")
+    assert plugin.findtext('render_engine') == 'ogre2'
+
+
 def test_crater_profile_excavates_bowl_and_raises_rim():
     radius = 40
     profile = prepare.crater_profile(np.array([0,20,40,66,80]),radius,8,2)
@@ -135,10 +201,34 @@ def test_low_sun_direction_and_packaged_normal_map(dem,tmp_path):
     assert direction[2] == pytest.approx(-np.sin(np.deg2rad(5)))
     assert light.findtext('cast_shadows') == 'true'
     visual = world.find('.//visual/geometry/heightmap')
-    assert float(visual.findtext('texture/size')) == 2
-    normal = np.asarray(Image.open(PACKAGE/'materials/textures/regolith_normal.png'))
+    assert float(visual.findtext('texture/size')) == .375
+    assert visual.findtext('texture/diffuse').endswith('/polar_lht_diffuse.png')
+    normal = np.asarray(Image.open(PACKAGE/'materials/textures/polar_lht_normal.png'))
     assert normal.shape == (2048,2048,3)
     assert np.std(normal[:,:,0]) > 1
+
+
+def test_polar_material_source_and_highlands_appearance_are_preserved(dem, tmp_path):
+    textures = PACKAGE/'materials/textures'
+    metadata = json.loads((textures/'polar_lht.json').read_text())
+    source = PACKAGE/'materials/sources/polar_lht.png'
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == metadata['source_sha256']
+    assert metadata['member'].startswith('Terrain13_LHT/')
+    assert 'laboratory' in metadata['source_kind']
+    diffuse = np.asarray(Image.open(textures/'polar_lht_diffuse.png'))
+    np.testing.assert_array_equal(diffuse[:, :, 0], diffuse[:, :, 1])
+    np.testing.assert_array_equal(diffuse[:, :, 0], diffuse[:, :, 2])
+    srgb = diffuse[:, :, 0].astype(float)/255
+    linear = np.where(srgb <= .04045, srgb/12.92, ((srgb+.055)/1.055)**2.4)
+    assert linear.mean() == pytest.approx(.30, abs=.005)
+    assert linear.std() < .025
+    normal = np.asarray(Image.open(textures/'polar_lht_normal.png')).astype(float)/127.5-1
+    assert np.sqrt(np.mean(normal[:, :, 0]**2+normal[:, :, 1]**2)) < .035
+    np.testing.assert_allclose(np.linalg.norm(normal, axis=-1), 1, atol=.008)
+    result = prepare.prepare(dem[0], PACKAGE, tmp_path/'world')
+    assert result['surface_material'] == metadata
+    assert result['texture_size_m'] == metadata['tile_size_m']
+    assert result['sun_intensity'] == 10
 
 
 @pytest.mark.parametrize('options', [

@@ -31,16 +31,18 @@ def start(context):
                     '--crater-count',arg('crater_count'),'--crater-seed',arg('crater_seed'),
                     '--sun-elevation',arg('sun_elevation'),'--sun-azimuth',arg('sun_azimuth'),
                     '--sun-intensity',arg('sun_intensity'),'--texture-size',arg('texture_size')]
-    if arg('gui').lower() == 'true':
-        vendor = Path(get_package_prefix('gz_rendering_vendor'))
-        rendering = os.environ.get('GZ_RENDERING_RESOURCE_PATH',
-                                   str(vendor/'opt/gz_rendering_vendor/share/gz/gz-rendering8'))
-        preparation.extend(['--rendering-resources',rendering])
+    # Sensor rendering also needs the terrain resources when the GUI is disabled.
+    vendor = Path(get_package_prefix('gz_rendering_vendor'))
+    rendering = os.environ.get('GZ_RENDERING_RESOURCE_PATH',
+                               str(vendor/'opt/gz_rendering_vendor/share/gz/gz-rendering8'))
+    preparation.extend(['--rendering-resources',rendering])
     subprocess.run(preparation,check=True)
     spawn = json.loads((cache/'spawn.json').read_text())
     command = ['gz', 'sim', '-r', '-v', '3']
     if arg('gui').lower() != 'true':
         command.append('-s')
+        if arg('headless_rendering').lower() == 'true':
+            command.append('--headless-rendering')
     command.append(str(cache/'site20.sdf'))
     environment = {'GZ_SIM_RESOURCE_PATH': str(share.parent)+os.pathsep+os.environ.get('GZ_SIM_RESOURCE_PATH', '')}
     if 'rendering_resources' in spawn:
@@ -56,7 +58,7 @@ def start(context):
         Node(package='robot_state_publisher', executable='robot_state_publisher',
              parameters=[{'use_sim_time': True, 'robot_description': (cache/'lumos.urdf').read_text()}]),
         Node(package='ros_gz_bridge', executable='parameter_bridge',
-             parameters=[{'config_file': str(share/'config/bridge.yaml')}], output='screen'),
+             parameters=[{'use_sim_time': True, 'config_file': str(share/'config/bridge.yaml')}], output='screen'),
     ]
     if arg('gui').lower() == 'true':
         # Set the view after the GUI scene is ready, overriding a saved overview camera.
@@ -80,6 +82,7 @@ def generate_launch_description():
         'output': (str(root/'build/gazebo_site20'), 'Generated world, heightmap and spawn pose'),
         'samples': ('0', '0: full map; 257/513/1025/2049: centered crop, still 5 m/pixel'),
         'gui': ('true', 'Start Gazebo GUI'),
+        'headless_rendering': ('true', 'Use EGL for cameras with gui:=false; false uses an X display'),
         'x': ('0', 'Spawn X in meters from the center of Site20'),
         'y': ('0', 'Spawn Y in meters toward the top of the DEM raster'),
         'yaw': ('0', 'Spawn yaw in radians; zero faces +X'),
@@ -87,8 +90,8 @@ def generate_launch_description():
         'crater_seed': ('20', 'Repeatable crater seed, or -1 for a fresh random layout'),
         'sun_elevation': ('5', 'Sun elevation above the grid horizon, in degrees'),
         'sun_azimuth': ('135', 'Direction toward the sun, degrees from +X toward +Y in the DEM grid'),
-        'sun_intensity': ('3', 'Gazebo light multiplier (not calibrated solar irradiance)'),
-        'texture_size': ('2', 'Regolith texture tile size in meters'),
+        'sun_intensity': ('10', 'Gazebo light / photographic brightness multiplier (not calibrated irradiance)'),
+        'texture_size': ('0.375', 'POLAR NU-LHT regolith texture tile size in meters (approximate)'),
     }
     return LaunchDescription([
         *[DeclareLaunchArgument(name, default_value=value, description=description)

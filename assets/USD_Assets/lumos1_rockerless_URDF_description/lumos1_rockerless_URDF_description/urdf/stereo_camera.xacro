@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Parallel pinhole cameras: 120 mm baseline, 90 degree horizontal FOV.
+       Keep physical offsets and the right projection matrix tied together. -->
+  <xacro:property name="stereo_baseline" value="0.12"/>
+  <xacro:property name="stereo_focal_length" value="320.0"/>
+
+  <link name="stereo_camera_link">
+    <inertial>
+      <mass value="0.08"/>
+      <inertia ixx="0.000176" ixy="0" ixz="0" iyy="0.000012" iyz="0" izz="0.000176"/>
+    </inertial>
+    <visual>
+      <geometry><box size="0.03 0.16 0.03"/></geometry>
+      <material name="stereo_housing"><color rgba="0.12 0.12 0.14 1"/></material>
+    </visual>
+    <collision><geometry><box size="0.03 0.16 0.03"/></geometry></collision>
+  </link>
+  <joint name="stereo_camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="stereo_camera_link"/>
+    <!-- Undo the CAD yaw: camera +X is rover forward, +Y is left. -->
+    <origin xyz="0 -0.10 0.20" rpy="0 0 ${-pi/2}"/>
+  </joint>
+
+  <xacro:macro name="stereo_eye" params="side offset baseline">
+    <link name="stereo_${side}_camera_link">
+      <visual>
+        <origin xyz="-0.004 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="0.011" length="0.008"/></geometry>
+        <material name="stereo_lens"><color rgba="0.05 0.15 0.25 1"/></material>
+      </visual>
+    </link>
+    <joint name="stereo_${side}_camera_joint" type="fixed">
+      <parent link="stereo_camera_link"/>
+      <child link="stereo_${side}_camera_link"/>
+      <origin xyz="0.023 ${offset} 0"/>
+    </joint>
+    <link name="stereo_${side}_optical_frame"/>
+    <joint name="stereo_${side}_optical_joint" type="fixed">
+      <parent link="stereo_${side}_camera_link"/>
+      <child link="stereo_${side}_optical_frame"/>
+      <!-- ROS optical: +Z forward, +X right, +Y down. -->
+      <origin rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+    <gazebo reference="stereo_${side}_camera_link">
+      <sensor name="stereo_${side}" type="camera">
+        <always_on>true</always_on>
+        <update_rate>15</update_rate>
+        <topic>/stereo/${side}/image_raw</topic>
+        <gz_frame_id>stereo_${side}_optical_frame</gz_frame_id>
+        <camera name="stereo_${side}">
+          <camera_info_topic>/stereo/${side}/camera_info</camera_info_topic>
+          <optical_frame_id>stereo_${side}_optical_frame</optical_frame_id>
+          <horizontal_fov>${pi/2}</horizontal_fov>
+          <image><width>640</width><height>480</height><format>R8G8B8</format></image>
+          <clip><near>0.02</near><far>2000</far></clip>
+          <lens>
+            <intrinsics>
+              <fx>${stereo_focal_length}</fx><fy>${stereo_focal_length}</fy>
+              <cx>319.5</cx><cy>239.5</cy><s>0</s>
+            </intrinsics>
+            <projection>
+              <p_fx>${stereo_focal_length}</p_fx><p_fy>${stereo_focal_length}</p_fy>
+              <p_cx>319.5</p_cx><p_cy>239.5</p_cy>
+              <tx>${-stereo_focal_length * baseline}</tx><ty>0</ty>
+            </projection>
+          </lens>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+  <xacro:stereo_eye side="left" offset="${stereo_baseline/2}" baseline="0"/>
+  <xacro:stereo_eye side="right" offset="${-stereo_baseline/2}" baseline="${stereo_baseline}"/>
+</robot>

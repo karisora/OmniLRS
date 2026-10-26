@@ -5,6 +5,7 @@
 <xacro:arg name="mesh_directory" default="package://lumos1_rockerless_URDF_description/meshes"/>
 <xacro:include filename="materials.xacro" />
 <xacro:include filename="lumos1_rockerless_URDF.gazebo" />
+<xacro:include filename="stereo_camera.xacro" />
 <!-- CAD forward is -Y. Rotate into ROS +X forward, +Y left, +Z up.
      The footprint lies at the bottom of the nominal 80 mm wheels. -->
 <link name="base_footprint"/>
