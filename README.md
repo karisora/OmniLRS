@@ -73,6 +73,11 @@ Then Follow the [Getting Started steps](https://github.com/OmniLRS/OmniLRS/wiki/
 
 ### ROS2 Integration
 
+To run the Lumos rover on the NASA Site20 5 m/pixel DEM in ROS 2 Jazzy / Gazebo
+Harmonic, run `bash scripts/run_site20_gazebo.sh`.
+See the [Site20 Gazebo instructions](assets/USD_Assets/lumos1_rockerless_URDF_description/lumos1_rockerless_URDF_description/README.md)
+for spawning, respawning, and ROS velocity commands.
+
 See the separate git repository to run the ROS2 demo. \
 It supports joystick teleoperation and navigation. \
 https://github.com/jnskkmhr/omnilrs_ros2_demo

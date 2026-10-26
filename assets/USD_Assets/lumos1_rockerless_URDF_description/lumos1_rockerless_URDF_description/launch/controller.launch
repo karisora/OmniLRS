@@ -1,0 +1,9 @@
+<launch>
+
+<rosparam file="$(find lumos1_rockerless_URDF_description)/launch/controller.yaml" command="load"/>
+<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="lumos1_rockerless_URDF" args="joint_rf_position_controller joint_rb_position_controller joint_lb_position_controller joint_lf_position_controller joint_state_controller "/>
+<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false" output="screen">
+  <remap from="/joint_states" to="/lumos1_rockerless_URDF/joint_states"/>
+</node>
+
+</launch>

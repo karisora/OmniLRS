@@ -1,0 +1,23 @@
+lumos1_rockerless_URDF_controller:
+  # Publish all joint states -----------------------------------
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 50
+
+  # Position Controllers --------------------------------------
+  joint_rf_position_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint_rf
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  joint_rb_position_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint_rb
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  joint_lb_position_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint_lb
+    pid: {p: 100.0, i: 0.01, d: 10.0}
+  joint_lf_position_controller:
+    type: effort_controllers/JointPositionController
+    joint: joint_lf
+    pid: {p: 100.0, i: 0.01, d: 10.0}

@@ -1,0 +1,48 @@
+<?xml version="1.0" ?>
+<robot name="lumos1_rockerless_URDF" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+<transmission name="joint_rf_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="joint_rf">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="joint_rf_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="joint_rb_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="joint_rb">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="joint_rb_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="joint_lb_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="joint_lb">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="joint_lb_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="joint_lf_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="joint_lf">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="joint_lf_actr">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+</robot>

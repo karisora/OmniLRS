@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <world name="site20">
+    <gravity>0 0 -1.62</gravity>
+    <physics name="lunar_physics" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <dart><collision_detector>bullet</collision_detector></dart>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <scene>
+      <ambient>0.25 0.25 0.25 1</ambient>
+      <background>0.005 0.005 0.008 1</background>
+      <shadows>true</shadows>
+    </scene>
+    <light name="sun" type="directional">
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.95 0.95 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.3 -0.5</direction>
+      <cast_shadows>true</cast_shadows>
+    </light>
+    <model name="site20_5m_terrain">
+      <static>true</static>
+      <!-- DART applies the model pose; Ogre2 terrain uses heightmap/pos.
+           Keep both origins equal so contact and rendering coincide. -->
+      <pose>0 0 ${terrain_z} 0 0 0</pose>
+      <link name="terrain">
+        <collision name="terrain_collision">
+          <geometry><heightmap>
+            <uri>${heightmap_uri}</uri>
+            <!-- DART divides this extent by the sample count (not count-1).
+                 The resulting collision vertices remain exactly 5 m apart. -->
+            <size>${collision_extent} ${collision_extent} ${height_range}</size>
+            <pos>0 0 0</pos>
+            <sampling>1</sampling>
+          </heightmap></geometry>
+          <surface><friction><ode><mu>0.8</mu><mu2>0.8</mu2></ode></friction></surface>
+        </collision>
+        <visual name="terrain_visual">
+          <geometry><heightmap>
+            <uri>${heightmap_uri}</uri>
+            <size>${extent} ${extent} ${height_range}</size>
+            <pos>0 0 ${terrain_z}</pos>
+            <sampling>1</sampling>
+            <use_terrain_paging>false</use_terrain_paging>
+            <texture>
+              <diffuse>${texture_uri}</diffuse>
+              <normal>${normal_uri}</normal>
+              <size>20</size>
+            </texture>
+          </heightmap></geometry>
+        </visual>
+      </link>
+    </model>
+    <gui fullscreen="false">
+      <plugin filename="MinimalScene" name="3D View">
+        <gz-gui><title>Site20 — Lumos</title><property type="bool" key="showTitleBar">false</property><property type="string" key="state">docked</property></gz-gui>
+        <engine>ogre2</engine>
+        <scene>scene</scene>
+        <ambient_light>0.25 0.25 0.25</ambient_light>
+        <background_color>0.005 0.005 0.008</background_color>
+        <camera_pose>${camera_pose}</camera_pose>
+        <camera_clip><near>0.02</near><far>30000</far></camera_clip>
+      </plugin>
+      <plugin filename="GzSceneManager" name="Scene Manager">
+        <gz-gui><property key="state" type="string">floating</property><property key="width" type="double">5</property><property key="height" type="double">5</property><property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="InteractiveViewControl" name="View Control">
+        <gz-gui><property key="state" type="string">floating</property><property key="width" type="double">5</property><property key="height" type="double">5</property><property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="CameraTracking" name="Camera Tracking">
+        <gz-gui><property key="state" type="string">floating</property><property key="width" type="double">5</property><property key="height" type="double">5</property><property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="WorldControl" name="World Control">
+        <gz-gui>
+          <property key="state" type="string">floating</property><property key="height" type="double">72</property><property key="showTitleBar" type="bool">false</property>
+          <anchors target="3D View"><line own="left" target="left"/><line own="bottom" target="bottom"/></anchors>
+        </gz-gui>
+        <play_pause>true</play_pause><step>true</step><start_paused>false</start_paused><use_event>true</use_event>
+      </plugin>
+      <plugin filename="WorldStats" name="World Stats">
+        <gz-gui>
+          <property key="state" type="string">floating</property><property key="height" type="double">110</property><property key="width" type="double">290</property><property key="showTitleBar" type="bool">false</property>
+          <anchors target="3D View"><line own="right" target="right"/><line own="bottom" target="bottom"/></anchors>
+        </gz-gui>
+        <sim_time>true</sim_time><real_time>true</real_time><real_time_factor>true</real_time_factor>
+      </plugin>
+      <plugin filename="EntityTree" name="Entity Tree">
+        <gz-gui><property key="state" type="string">docked</property><property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="SelectEntities" name="Select Entities">
+        <gz-gui><property key="state" type="string">floating</property><property key="width" type="double">5</property><property key="height" type="double">5</property><property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+      <plugin filename="EntityContextMenuPlugin" name="Entity Context Menu">
+        <gz-gui><property key="state" type="string">floating</property><property key="width" type="double">5</property><property key="height" type="double">5</property><property key="showTitleBar" type="bool">false</property></gz-gui>
+      </plugin>
+    </gui>
+  </world>
+</sdf>
