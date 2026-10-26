@@ -25,16 +25,27 @@ def start(context):
     share = Path(get_package_share_directory(PACKAGE))
     prefix = Path(get_package_prefix(PACKAGE))
     cache = Path(arg('output')).expanduser().resolve()
-    subprocess.run([sys.executable, str(prefix/'lib'/PACKAGE/'prepare_site20.py'),
+    preparation = [sys.executable, str(prefix/'lib'/PACKAGE/'prepare_site20.py'),
                     '--package', str(share), '--dem', arg('dem'), '--output', str(cache),
-                    '--samples', arg('samples'), '--x', arg('x'), '--y', arg('y'), '--yaw', arg('yaw')], check=True)
+                    '--samples', arg('samples'), '--x', arg('x'), '--y', arg('y'), '--yaw', arg('yaw'),
+                    '--crater-count',arg('crater_count'),'--crater-seed',arg('crater_seed'),
+                    '--sun-elevation',arg('sun_elevation'),'--sun-azimuth',arg('sun_azimuth'),
+                    '--sun-intensity',arg('sun_intensity'),'--texture-size',arg('texture_size')]
+    if arg('gui').lower() == 'true':
+        vendor = Path(get_package_prefix('gz_rendering_vendor'))
+        rendering = os.environ.get('GZ_RENDERING_RESOURCE_PATH',
+                                   str(vendor/'opt/gz_rendering_vendor/share/gz/gz-rendering8'))
+        preparation.extend(['--rendering-resources',rendering])
+    subprocess.run(preparation,check=True)
     spawn = json.loads((cache/'spawn.json').read_text())
     command = ['gz', 'sim', '-r', '-v', '3']
     if arg('gui').lower() != 'true':
         command.append('-s')
     command.append(str(cache/'site20.sdf'))
-    server = ExecuteProcess(cmd=command, output='screen', additional_env={
-        'GZ_SIM_RESOURCE_PATH': str(share.parent)+os.pathsep+os.environ.get('GZ_SIM_RESOURCE_PATH', '')})
+    environment = {'GZ_SIM_RESOURCE_PATH': str(share.parent)+os.pathsep+os.environ.get('GZ_SIM_RESOURCE_PATH', '')}
+    if 'rendering_resources' in spawn:
+        environment['GZ_RENDERING_RESOURCE_PATH'] = spawn['rendering_resources']
+    server = ExecuteProcess(cmd=command, output='screen', additional_env=environment)
     rover = Node(package='ros_gz_sim', executable='create', output='screen',
                  arguments=['-world', 'site20', '-file', str(cache/'lumos.urdf'),
                             '-name', 'lumos', '-allow_renaming', 'false',
@@ -72,6 +83,12 @@ def generate_launch_description():
         'x': ('0', 'Spawn X in meters from the center of Site20'),
         'y': ('0', 'Spawn Y in meters toward the top of the DEM raster'),
         'yaw': ('0', 'Spawn yaw in radians; zero faces +X'),
+        'crater_count': ('64', 'Number of synthetic craters; 0 keeps only the measured DEM'),
+        'crater_seed': ('20', 'Repeatable crater seed, or -1 for a fresh random layout'),
+        'sun_elevation': ('5', 'Sun elevation above the grid horizon, in degrees'),
+        'sun_azimuth': ('135', 'Direction toward the sun, degrees from +X toward +Y in the DEM grid'),
+        'sun_intensity': ('3', 'Gazebo light multiplier (not calibrated solar irradiance)'),
+        'texture_size': ('2', 'Regolith texture tile size in meters'),
     }
     return LaunchDescription([
         *[DeclareLaunchArgument(name, default_value=value, description=description)

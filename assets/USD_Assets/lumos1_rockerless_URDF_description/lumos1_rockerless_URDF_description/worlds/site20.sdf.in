@@ -11,15 +11,18 @@
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
     <scene>
-      <ambient>0.25 0.25 0.25 1</ambient>
-      <background>0.005 0.005 0.008 1</background>
+      <!-- Small fill approximates reflected surface light; no atmospheric sky. -->
+      <ambient>0.02 0.02 0.02 1</ambient>
+      <background>0 0 0 1</background>
       <shadows>true</shadows>
+      <grid>false</grid>
     </scene>
     <light name="sun" type="directional">
       <pose>0 0 10 0 0 0</pose>
-      <diffuse>0.95 0.95 0.9 1</diffuse>
-      <specular>0.2 0.2 0.2 1</specular>
-      <direction>-0.5 0.3 -0.5</direction>
+      <diffuse>1 0.99 0.97 1</diffuse>
+      <specular>0.05 0.05 0.05 1</specular>
+      <intensity>${sun_intensity}</intensity>
+      <direction>${sun_direction}</direction>
       <cast_shadows>true</cast_shadows>
     </light>
     <model name="site20_5m_terrain">
@@ -49,7 +52,7 @@
             <texture>
               <diffuse>${texture_uri}</diffuse>
               <normal>${normal_uri}</normal>
-              <size>20</size>
+              <size>${texture_size}</size>
             </texture>
           </heightmap></geometry>
         </visual>
@@ -60,8 +63,8 @@
         <gz-gui><title>Site20 — Lumos</title><property type="bool" key="showTitleBar">false</property><property type="string" key="state">docked</property></gz-gui>
         <engine>ogre2</engine>
         <scene>scene</scene>
-        <ambient_light>0.25 0.25 0.25</ambient_light>
-        <background_color>0.005 0.005 0.008</background_color>
+        <ambient_light>0.02 0.02 0.02</ambient_light>
+        <background_color>0 0 0</background_color>
         <camera_pose>${camera_pose}</camera_pose>
         <camera_clip><near>0.02</near><far>30000</far></camera_clip>
       </plugin>
@@ -77,14 +80,14 @@
       <plugin filename="WorldControl" name="World Control">
         <gz-gui>
           <property key="state" type="string">floating</property><property key="height" type="double">72</property><property key="showTitleBar" type="bool">false</property>
-          <anchors target="3D View"><line own="left" target="left"/><line own="bottom" target="bottom"/></anchors>
+          <anchors target="Site20 — Lumos"><line own="left" target="left"/><line own="bottom" target="bottom"/></anchors>
         </gz-gui>
         <play_pause>true</play_pause><step>true</step><start_paused>false</start_paused><use_event>true</use_event>
       </plugin>
       <plugin filename="WorldStats" name="World Stats">
         <gz-gui>
           <property key="state" type="string">floating</property><property key="height" type="double">110</property><property key="width" type="double">290</property><property key="showTitleBar" type="bool">false</property>
-          <anchors target="3D View"><line own="right" target="right"/><line own="bottom" target="bottom"/></anchors>
+          <anchors target="Site20 — Lumos"><line own="right" target="right"/><line own="bottom" target="bottom"/></anchors>
         </gz-gui>
         <sim_time>true</sim_time><real_time>true</real_time><real_time_factor>true</real_time_factor>
       </plugin>
