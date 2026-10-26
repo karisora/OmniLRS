@@ -22,7 +22,18 @@ OmniLRSと同じ起伏・クレータープロファイル・配置を生成し�
 標準の `assets/Textures/GravelStones/` の色画像・法線マップを使い、
 元MDLの `texture_scale=5` に合わせて0.2 m周期で繰り返します。
 色画像は元ファイルを直接参照し、EXR法線マップはGazebo用にPNGへ形式変換します。
-太陽高度は5°です。`texture_size` の標準値 `auto` は、選択した標準材質のUV倍率を使用します。
+`texture_size` の標準値 `auto` は、選択した標準材質のUV倍率を使用します。
+
+照明も元設定の `sun_settings` に従い、標準では太陽高度45°・方位180°・白色です。
+OmniLRSの `create_sun()` と同じ回転を適用し、光の進行方向は概ね `(0, +0.707, -0.707)`、
+つまり −Y側から斜め下向きに照らします。拡散・鏡面光の倍率も元設定の1.0を使用し、
+以前追加した環境光による底上げは行いません。
+`sun_elevation`、`sun_azimuth`、`sun_intensity` の標準値は `auto` です。
+元のUsdLux強度1750はGazeboの相対強度1.0に対応させ、設定値の比率を維持します。
+UsdLuxとGazeboの強度単位・描画方式は異なるため、画素輝度を校正した一致ではありません。
+ここでは `sun_settings` の初期設定を固定で使用し、ネイティブの天体暦による時刻更新は行いません。
+元設定の太陽角直径0.53°・色温度6500 Kも `spawn.json` に記録しますが、
+Gazeboの方向光源には元のRTXと同じ面積光源の影・色温度処理はありません。
 
 生成物は `build/gazebo_lunaryard/` の `lunaryard.sdf`、`lunaryard_dem.npy`、
 `lunaryard_mask.npy`、`lunaryard_height.png`、`craters.json`、`spawn.json` です。

@@ -172,6 +172,7 @@ def prepare(dem_path, package_path, output_path, samples=0, x=0.0, y=0.0, yaw=0.
         texture_uri=escape((textures/'polar_lht_diffuse.png').as_uri()),
         normal_uri=escape((textures/'polar_lht_normal.png').as_uri()),texture_size=texture_size,
         sun_direction=' '.join(str(v) for v in sun_direction),sun_intensity=sun_intensity,
+        sun_diffuse='1 1 1 1', sun_specular='0.05 0.05 0.05 1', ambient_rgb='0.02 0.02 0.02',
         camera_pose=f'{x+1.2} {y-1.2} {z+0.9} 0 0.48 2.356194490192345')
     (output_path/'site20.sdf').write_text(world)
     urdf = xacro.process_file(str(package_path/'urdf/lumos1_rockerless_URDF.xacro'),

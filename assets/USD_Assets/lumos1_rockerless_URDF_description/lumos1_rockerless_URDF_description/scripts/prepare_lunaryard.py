@@ -20,6 +20,37 @@ import yaml
 from prepare_site20 import matte_terrain_resources
 
 
+def native_lighting(config_path, elevation=None, azimuth=None, intensity=None):
+    """Translate the preset's initial SunConf and create_sun() orientation."""
+    sun = yaml.safe_load(config_path.read_text())['sun_settings']
+    elevation = float(sun['elevation'] if elevation is None else elevation)
+    azimuth = float(sun['azimuth'] if azimuth is None else azimuth)
+    # UsdLux intensity and SDF relative light power are different quantities.
+    # Preserve the preset's intensity relative to the standard SunConf value;
+    # explicit sun_intensity remains a Gazebo multiplier, as before.
+    power = float(sun['intensity'])/1750. if intensity is None else float(intensity)
+    if not all(math.isfinite(v) for v in (elevation, azimuth, power)):
+        raise ValueError('Sun settings must be finite')
+    if not 0 <= elevation <= 90 or not 0 < power <= 100:
+        raise ValueError('Invalid sun elevation or relative intensity')
+    e, a = math.radians(elevation), math.radians(azimuth)
+    # UsdLux emits along -Z. OmniLRS first applies its fixed local quaternion,
+    # then Euler xyz(0, elevation, azimuth-90) on the parent Xform.
+    direction = (math.cos(e)*math.sin(a), -math.cos(e)*math.cos(a), -math.sin(e))
+    color = np.asarray(sun['color'], dtype=float)
+    if color.shape != (3,) or not np.isfinite(color).all() or np.any((color < 0) | (color > 1)):
+        raise ValueError('Invalid native sun color')
+    diffuse = np.append(color*float(sun['diffuse_multiplier']), 1.)
+    specular = np.append(color*float(sun['specular_multiplier']), 1.)
+    return dict(source='sun_settings in native Lunaryard YAML', elevation_deg=elevation,
+                azimuth_deg=azimuth, direction=list(direction), color=color.tolist(),
+                diffuse=diffuse.tolist(), specular=specular.tolist(),
+                native_intensity=float(sun['intensity']), gazebo_intensity=power,
+                intensity_conversion='Relative to OmniLRS SunConf intensity 1750; not a photometric calibration',
+                temperature_kelvin=float(sun['temperature']), angular_diameter_deg=float(sun['angle']),
+                ambient_rgb=[0., 0., 0.], mode='Fixed initial sun_settings; no stellar-engine time updates')
+
+
 def native_material(root, config_path, output):
     """Use the bundled maps and UV scale selected by the Lunaryard preset."""
     config = yaml.safe_load(config_path.read_text())
@@ -117,14 +148,14 @@ def generate(root, config_path, seed):
 
 
 def prepare(root, config_path, package, output, seed=None, x=20., y=20., yaw=0.,
-            sun_elevation=5., sun_azimuth=135., sun_intensity=10., texture_size=None,
+            sun_elevation=None, sun_azimuth=None, sun_intensity=None, texture_size=None,
             rendering_resources=None):
     root, config_path, package, output = (Path(p).expanduser().resolve() for p in (root, config_path, package, output))
-    if not all(math.isfinite(v) for v in (x, y, yaw, sun_elevation, sun_azimuth, sun_intensity)):
-        raise ValueError('Spawn, sun and texture settings must be finite')
-    if (not 0 < sun_elevation <= 90 or not 0 < sun_intensity <= 100
-            or texture_size is not None and (not math.isfinite(texture_size) or texture_size <= 0)):
-        raise ValueError('Invalid sun elevation, intensity or texture size')
+    if not all(math.isfinite(v) for v in (x, y, yaw)):
+        raise ValueError('Spawn settings must be finite')
+    if texture_size is not None and (not math.isfinite(texture_size) or texture_size <= 0):
+        raise ValueError('Invalid texture size')
+    lighting = native_lighting(config_path, sun_elevation, sun_azimuth, sun_intensity)
     dem, mask, craters, yard, seed = generate(root, config_path, seed)
     spacing = float(yard['resolution'])
     rows, cols = dem.shape
@@ -158,8 +189,6 @@ def prepare(root, config_path, package, output, seed=None, x=20., y=20., yaw=0.,
     np.save(output/'lunaryard_mask.npy', mask)
     material = native_material(root, config_path, output)
     texture_size = material['tile_size_m'] if texture_size is None else texture_size
-    elevation, azimuth = math.radians(sun_elevation), math.radians(sun_azimuth)
-    direction = (-math.cos(elevation)*math.cos(azimuth), -math.cos(elevation)*math.sin(azimuth), -math.sin(elevation))
     world = Template((package/'worlds/site20.sdf.in').read_text()).substitute(
         world_name='lunaryard', world_title='OmniLRS Lunaryard', terrain_name='lunaryard_terrain',
         terrain_x=origin_x, terrain_y=origin_y, terrain_z=low,
@@ -167,7 +196,10 @@ def prepare(root, config_path, package, output, seed=None, x=20., y=20., yaw=0.,
         collision_extent=side*spacing, height_range=height_range,
         texture_uri=escape(material['diffuse_uri']),
         normal_uri=escape(material['normal_uri']), texture_size=texture_size,
-        sun_direction=' '.join(str(v) for v in direction), sun_intensity=sun_intensity,
+        sun_direction=' '.join(str(v) for v in lighting['direction']), sun_intensity=lighting['gazebo_intensity'],
+        sun_diffuse=' '.join(str(v) for v in lighting['diffuse']),
+        sun_specular=' '.join(str(v) for v in lighting['specular']),
+        ambient_rgb=' '.join(str(v) for v in lighting['ambient_rgb']),
         camera_pose=f'{x+1.2} {y-1.2} {z+.9} 0 0.48 2.356194490192345')
     (output/'lunaryard.sdf').write_text(world)
     urdf = xacro.process_file(str(package/'urdf/lumos1_rockerless_URDF.xacro'),
@@ -182,8 +214,9 @@ def prepare(root, config_path, package, output, seed=None, x=20., y=20., yaw=0.,
                     padding_top_left=[top, left], heightmap_origin_xy=[origin_x, origin_y],
                     source_bounds_xy=[0., (cols-1)*spacing, 0., (rows-1)*spacing],
                     elevation_quantization_m=height_range/65535, crater_count=len(craters),
-                    deformation_enabled=False, sun_elevation_deg=sun_elevation, sun_azimuth_deg=sun_azimuth,
-                    sun_intensity=sun_intensity, texture_size_m=texture_size, surface_material=material,
+                    deformation_enabled=False, sun_elevation_deg=lighting['elevation_deg'],
+                    sun_azimuth_deg=lighting['azimuth_deg'], sun_intensity=lighting['gazebo_intensity'],
+                    lighting=lighting, texture_size_m=texture_size, surface_material=material,
                     urdf=str(output/'lumos.urdf'))
     if rendering_resources is not None:
         metadata['rendering_resources'] = str(matte_terrain_resources(rendering_resources, output/'rendering'))
@@ -201,8 +234,10 @@ def main():
     parser.add_argument('--rendering-resources', type=Path)
     parser.add_argument('--texture-size', type=lambda value: None if value == 'auto' else float(value),
                         default=None, help='Tile size in meters; auto uses the native MDL UV scale')
-    for name, default in (('x', 20.), ('y', 20.), ('yaw', 0.), ('sun-elevation', 5.),
-                          ('sun-azimuth', 135.), ('sun-intensity', 10.)):
+    for name in ('sun-elevation', 'sun-azimuth', 'sun-intensity'):
+        parser.add_argument('--'+name, type=lambda value: None if value == 'auto' else float(value),
+                            default=None, help='auto uses the native sun_settings preset')
+    for name, default in (('x', 20.), ('y', 20.), ('yaw', 0.)):
         parser.add_argument('--'+name, type=float, default=default)
     args = parser.parse_args()
     try:

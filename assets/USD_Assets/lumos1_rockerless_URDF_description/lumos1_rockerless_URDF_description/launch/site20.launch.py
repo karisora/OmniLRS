@@ -108,9 +108,9 @@ def generate_launch_description(map_name='site20'):
         'yaw': ('0', 'Spawn yaw in radians; zero faces +X'),
         'crater_count': ('64', 'Number of synthetic craters; 0 keeps only the measured DEM'),
         'crater_seed': ('20', 'Repeatable crater seed, or -1 for a fresh random layout'),
-        'sun_elevation': ('5', 'Sun elevation above the grid horizon, in degrees'),
-        'sun_azimuth': ('135', 'Direction toward the sun, degrees from +X toward +Y in the DEM grid'),
-        'sun_intensity': ('10', 'Gazebo light / photographic brightness multiplier (not calibrated irradiance)'),
+        'sun_elevation': ('auto' if map_name == 'lunaryard' else '5', 'Degrees; auto uses native Lunaryard sun_settings'),
+        'sun_azimuth': ('auto' if map_name == 'lunaryard' else '135', 'Degrees; Lunaryard uses the native OmniLRS convention'),
+        'sun_intensity': ('auto' if map_name == 'lunaryard' else '10', 'Gazebo relative power; auto maps native SunConf intensity'),
         'texture_size': ('auto' if map_name == 'lunaryard' else '0.375',
                          'Tile size in meters; auto uses Lunaryard material UV scale'),
     }

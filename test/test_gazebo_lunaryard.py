@@ -98,6 +98,7 @@ def test_default_gazebo_launcher_selects_lunaryard(tmp_path, monkeypatch):
     assert defaults['x'] == defaults['y'] == '20'
     assert defaults['output'].endswith('build/gazebo_lunaryard')
     assert defaults['texture_size'] == 'auto'
+    assert defaults['sun_elevation'] == defaults['sun_azimuth'] == defaults['sun_intensity'] == 'auto'
     aliases = (PACKAGE/'launch/gazebo.launch.py').read_text()
     assert 'launch/lunaryard.launch.py' in aliases
 
@@ -106,3 +107,24 @@ def test_invalid_spawn_is_rejected_before_generation(tmp_path):
     with pytest.raises(ValueError, match='finite'):
         yard.prepare(ROOT, CONFIG, PACKAGE, tmp_path, x=float('nan'))
     assert not (tmp_path/'lunaryard.sdf').exists()
+
+
+def test_default_sun_matches_native_usd_light_transform(exported):
+    from scipy.spatial.transform import Rotation
+    output, metadata = exported
+    lighting = metadata['lighting']
+    assert lighting['elevation_deg'] == 45
+    assert lighting['azimuth_deg'] == 180
+    assert lighting['native_intensity'] == 1750
+    assert lighting['gazebo_intensity'] == 1
+    # Independent reproduction of StellarEngineEnvMixin.create_sun().
+    fixed = Rotation.from_quat([.5, -.5, -.5, .5])
+    parent = Rotation.from_euler('xyz', [0, 45, 180-90], degrees=True)
+    expected = (parent*fixed).apply([0, 0, -1])
+    light = ET.parse(output/'lunaryard.sdf').getroot().find('world/light')
+    direction = np.fromstring(light.findtext('direction'), sep=' ')
+    np.testing.assert_allclose(direction, expected, atol=1e-15)
+    assert float(light.findtext('intensity')) == 1
+    assert light.findtext('diffuse') == light.findtext('specular') == '1.0 1.0 1.0 1.0'
+    scene = ET.parse(output/'lunaryard.sdf').getroot().find('world/scene')
+    assert np.fromstring(scene.findtext('ambient'), sep=' ')[:3].sum() == 0
